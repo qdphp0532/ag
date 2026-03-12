@@ -1,4 +1,4 @@
-# Verified on conda env: py312
+# Verified on Python 3.12
 # LangChain Agent + FastAPI service
 langchain==1.1.3
 langchain-core==1.2.0

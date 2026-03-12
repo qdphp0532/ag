@@ -48,10 +48,28 @@ ag/
 
 ## 环境准备
 
-推荐直接使用 conda 的 `py312` 环境。
+项目要求：
+
+- Python 3.10+
+- 建议使用独立虚拟环境
+- 当前依赖组合已在 Python 3.12 下验证
+
+你可以使用 `venv`、`conda`、`uv` 等任意环境管理方式。下面给两个常见示例。
+
+使用 `venv`：
 
 ```bash
-conda activate py312
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+```
+
+使用 `conda`：
+
+```bash
+conda create -n ag python=3.12 -y
+conda activate ag
 pip install -r requirements.txt
 cp .env.example .env
 ```
@@ -156,10 +174,10 @@ curl -X POST http://localhost:8000/api/v1/invoke \
 ## 测试
 
 ```bash
-conda run -n py312 python -m pytest tests/ -q
+python -m pytest tests/ -q
 ```
 
-当前仓库在 `py312` 环境下已验证：
+当前仓库已在 Python 3.12 环境下验证：
 
 ```text
 4 passed

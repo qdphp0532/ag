@@ -8,6 +8,7 @@ from langchain_core.tools import BaseTool
 from app.agents.tools.retrieval import retrieve_documents, retriever
 from app.agents.tools.time_tools import get_current_time
 from app.agents.tools.common import echo
+from app.agents.tools.db import list_db_tables, query_examples
 
 
 # -----------------------------------------------------------------------------
@@ -18,6 +19,8 @@ AGENT_TOOLS: list[BaseTool] = [
     retrieve_documents,
     get_current_time,
     echo,
+    list_db_tables,
+    query_examples,
 ]
 
 
@@ -39,4 +42,6 @@ __all__ = [
     "retriever",
     "get_current_time",
     "echo",
+    "list_db_tables",
+    "query_examples",
 ]

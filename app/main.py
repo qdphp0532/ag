@@ -12,14 +12,13 @@ from app.api.routes import api_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 启动：预加载 Agent 与工作流图（触发单例）
     from app.agents.agent import get_agent
-    from app.agents.workflow_graph import get_workflow_graph
+    from app.domain import models  # noqa: F401  # 注册表到 Base.metadata
+    from app.db import init_db, dispose_db
     get_agent()
-    get_workflow_graph()
+    init_db()
     yield
-    # 关闭：可做连接池、缓存清理
-    pass
+    dispose_db()
 
 
 def create_app() -> FastAPI:
@@ -27,7 +26,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
-        description="LangChain Agent + FastAPI 包装",
+        description="LangChain Agent API",
         lifespan=lifespan,
         docs_url="/docs",
         redoc_url="/redoc",

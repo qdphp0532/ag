@@ -1,60 +1,71 @@
 # AG
 
-一个面向 AI Agent 开发的轻量基础框架，当前主线是：
+一个用于 AI Agent 开发的轻量 Python 基础框架。
+
+当前版本只保留一条清晰主线：
 
 - FastAPI 提供 HTTP 接口
 - LangChain `create_agent()` 作为统一 Agent 入口
-- `agents/tools/` 管理可扩展工具
-- `db/ + domain/` 管理数据库连接、模型和仓库
+- `app/agents/tools/` 组织 Agent 可调用工具
+- `app/db/` 和 `app/domain/` 负责数据库连接、模型和仓库
 
-这个仓库的目标不是堆很多能力，而是提供一个足够清晰、足够稳定、方便继续演进的起点。
+它的定位不是“大而全平台”，而是一个适合继续开发、方便理解和方便改造的起点。
 
-## 适合做什么
+## 当前能力
 
-- 做一个可调用工具的单 Agent 服务
-- 快速验证 RAG、时间工具、数据库只读查询这类能力
-- 作为后续业务 Agent 的基础脚手架
+当前仓库已经有这些基础能力：
 
-当前不默认做的事：
+- `GET /health` 健康检查
+- `POST /api/v1/invoke` 统一 Agent 调用入口
+- 检索工具：`retrieve_documents`
+- 时间工具：`get_current_time`
+- 通用测试工具：`echo`
+- 数据库只读工具：`list_db_tables`、`query_examples`
 
-- 多 Agent 协作
-- 复杂工作流图编排
-- 长会话持久化记忆
-- 高度抽象的插件系统
+注意：
 
-这些能力以后可以加，但默认骨架先保持简单。
+- 当前检索能力还是示例实现，默认返回固定文档片段
+- 当前没有多 Agent 协作
+- 当前没有独立 LangGraph 工作流入口
+- 当前没有长会话持久化记忆
 
 ## 项目结构
 
 ```text
 ag/
 ├── app/
-│   ├── main.py                 # FastAPI 入口
-│   ├── config.py               # 统一配置
-│   ├── api/                    # 路由、schema、依赖注入
-│   ├── agents/                 # Agent 入口与工具注册
-│   ├── db/                     # 引擎、Base、Session
-│   ├── domain/                 # 模型与仓库
-│   └── core/                   # 异常等基础设施
-├── doc/                        # 研发文档
-├── scripts/                    # demo / 辅助脚本
-├── tests/                      # 测试
+│   ├── main.py
+│   ├── config.py
+│   ├── api/
+│   │   ├── deps.py
+│   │   ├── routes/
+│   │   └── schemas/
+│   ├── agents/
+│   │   ├── agent.py
+│   │   └── tools/
+│   ├── db/
+│   ├── domain/
+│   └── core/
+├── doc/
+├── scripts/
+├── tests/
+├── .env.example
 └── requirements.txt
 ```
 
-你可以把主调用链理解成：
+主调用链可以理解成：
 
-`HTTP 请求 -> Agent -> Tool -> 返回结果`
+`HTTP 请求 -> Agent -> Tool -> 返回 answer / route / docs`
 
-## 环境准备
-
-项目要求：
+## 环境要求
 
 - Python 3.10+
 - 建议使用独立虚拟环境
 - 当前依赖组合已在 Python 3.12 下验证
 
-你可以使用 `venv`、`conda`、`uv` 等任意环境管理方式。下面给两个常见示例。
+环境管理工具不限，`venv`、`conda`、`uv` 都可以。
+
+## 安装
 
 使用 `venv`：
 
@@ -74,21 +85,33 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-然后按你的模型提供方填写 `.env`。
+然后按实际模型提供方填写 `.env`。
 
-## 环境变量示例
+## 配置
 
-仓库已提供 [.env.example](/Users/yongzhang/code/ai/ag/.env.example)。
+示例配置文件见 [.env.example](./.env.example)。
 
 最小可运行配置通常只需要：
 
 ```env
 DEFAULT_LLM_PROVIDER=openai
-OPENAI_API_KEY=your_api_key
+OPENAI_API_KEY=your_openai_api_key
 LLM_MODEL=gpt-4.1-mini
 ```
 
-如果你不用 OpenAI，也可以切到 `qwen`、`deepseek`、`doubao`。
+也支持：
+
+- `qwen`
+- `deepseek`
+- `doubao`
+
+数据库默认使用：
+
+```env
+DATABASE_URL=sqlite:///./data/app.db
+```
+
+应用启动时会自动创建表。
 
 ## 启动服务
 
@@ -96,17 +119,20 @@ LLM_MODEL=gpt-4.1-mini
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-启动后可访问：
+可访问：
 
-- 文档：`http://localhost:8000/docs`
-- 健康检查：`GET /health`
-- Agent 调用：`POST /api/v1/invoke`
+- Swagger 文档：`http://localhost:8000/docs`
+- 健康检查：`http://localhost:8000/health`
 
-## 调用示例
+## API 示例
+
+健康检查：
 
 ```bash
 curl http://localhost:8000/health
 ```
+
+调用 Agent：
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/invoke \
@@ -114,7 +140,7 @@ curl -X POST http://localhost:8000/api/v1/invoke \
   -d '{"query":"Where did Harrison work?"}'
 ```
 
-返回结构：
+当前响应结构：
 
 ```json
 {
@@ -124,52 +150,71 @@ curl -X POST http://localhost:8000/api/v1/invoke \
 }
 ```
 
-`route` 当前有三种：
+`route` 目前有三种：
 
-- `general`：模型直接回答，没有调用工具
+- `general`：模型直接回答
 - `tool`：调用了非检索类工具
 - `retrieval`：调用了 `retrieve_documents`
 
-## 开发入口
+## 当前工具
 
-如果你要学习这个框架怎么写，建议按这个顺序看：
+工具统一注册在 [app/agents/tools/__init__.py](./app/agents/tools/__init__.py)。
 
-1. [app/agents/tools/retrieval.py](/Users/yongzhang/code/ai/ag/app/agents/tools/retrieval.py)
-2. [app/agents/agent.py](/Users/yongzhang/code/ai/ag/app/agents/agent.py)
-3. [app/api/routes/agents.py](/Users/yongzhang/code/ai/ag/app/api/routes/agents.py)
-4. [app/config.py](/Users/yongzhang/code/ai/ag/app/config.py)
+当前内置工具：
 
-先理解工具怎么写，再看 Agent 怎么调用工具，最后看 API 怎么暴露出来。
+- [app/agents/tools/retrieval.py](./app/agents/tools/retrieval.py)
+  说明：示例检索工具，默认返回固定文档片段
+- [app/agents/tools/time_tools.py](./app/agents/tools/time_tools.py)
+  说明：返回当前时间
+- [app/agents/tools/common.py](./app/agents/tools/common.py)
+  说明：回显文本，主要用于测试
+- [app/agents/tools/db.py](./app/agents/tools/db.py)
+  说明：数据库表查看和示例数据查询
 
-## 怎么写第一个 Demo
+## 数据库说明
+
+数据库相关代码拆成了两层：
+
+- `app/db/`：连接、引擎、Base、Session
+- `app/domain/`：模型和仓库
+
+当前约定：
+
+- 仓库方法由调用方传入 `Session`
+- Agent 数据库工具只做只读操作
+- 默认 SQLite 会在启动时自动建表
+
+如果你想快速写入一条示例数据，可以看 [scripts/mysql_demo.py](./scripts/mysql_demo.py)。
+
+## 推荐学习顺序
+
+如果你是第一次接触这个框架，建议按这个顺序看代码：
+
+1. [app/agents/tools/retrieval.py](./app/agents/tools/retrieval.py)
+2. [app/agents/agent.py](./app/agents/agent.py)
+3. [app/api/routes/agents.py](./app/api/routes/agents.py)
+4. [app/config.py](./app/config.py)
+5. [app/agents/tools/db.py](./app/agents/tools/db.py)
+
+顺序不要反过来。先看工具，再看 Agent，再看 API。
+
+## 第一个 Demo 建议
 
 最适合的第一个 demo 是“内部知识问答”：
 
-1. 修改 [app/agents/tools/retrieval.py](/Users/yongzhang/code/ai/ag/app/agents/tools/retrieval.py) 里的示例文档
+1. 修改 [app/agents/tools/retrieval.py](./app/agents/tools/retrieval.py) 中的示例知识
 2. 启动服务
-3. 通过 `/api/v1/invoke` 发问题
-4. 验证 Agent 是否先调工具再回答
+3. 调用 `/api/v1/invoke`
+4. 观察 Agent 是否先调用工具再回答
 
-不要一开始就做复杂工作流、持久化记忆或多 Agent。
+做完这个 demo，你基本就能理解这个框架最核心的写法。
 
-## 怎么扩展
+不建议第一个 demo 就做：
 
-### 1. 新增工具
-
-在 `app/agents/tools/` 下新增模块，然后在 [app/agents/tools/__init__.py](/Users/yongzhang/code/ai/ag/app/agents/tools/__init__.py) 注册。
-
-### 2. 新增数据库模型
-
-在 `app/domain/models/` 下新增模型，在 `app/domain/repositories/` 下新增仓库。
-
-### 3. 新增数据库工具
-
-在 [app/agents/tools/db.py](/Users/yongzhang/code/ai/ag/app/agents/tools/db.py) 中添加只读工具。
-
-当前约定是：
-
-- 仓库方法由调用方传入 `Session`
-- Agent 的数据库工具只做只读查询
+- 多 Agent
+- 复杂工作流
+- 写数据库
+- 长会话记忆
 
 ## 测试
 
@@ -177,7 +222,7 @@ curl -X POST http://localhost:8000/api/v1/invoke \
 python -m pytest tests/ -q
 ```
 
-当前仓库已在 Python 3.12 环境下验证：
+当前仓库已验证：
 
 ```text
 4 passed
@@ -185,22 +230,12 @@ python -m pytest tests/ -q
 
 ## 文档
 
-更详细的说明在 `doc/`：
+详细说明见 `doc/`：
 
-- [doc/00-快速开始.md](/Users/yongzhang/code/ai/ag/doc/00-%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B.md)
-- [doc/01-架构与领域.md](/Users/yongzhang/code/ai/ag/doc/01-%E6%9E%B6%E6%9E%84%E4%B8%8E%E9%A2%86%E5%9F%9F.md)
-- [doc/02-工具开发.md](/Users/yongzhang/code/ai/ag/doc/02-%E5%B7%A5%E5%85%B7%E5%BC%80%E5%8F%91.md)
-- [doc/03-选型与扩展.md](/Users/yongzhang/code/ai/ag/doc/03-%E9%80%89%E5%9E%8B%E4%B8%8E%E6%89%A9%E5%B1%95.md)
-- [doc/04-数据库与存储.md](/Users/yongzhang/code/ai/ag/doc/04-%E6%95%B0%E6%8D%AE%E5%BA%93%E4%B8%8E%E5%AD%98%E5%82%A8.md)
-
-## 当前状态
-
-这是一个适合继续开发的基础框架，不是大而全平台。
-
-如果你后面准备继续扩展，推荐优先顺序是：
-
-1. 新工具
-2. 新业务模型和仓库
-3. 流式输出
-4. 记忆与持久化
-5. 复杂工作流
+- [doc/00-快速开始.md](./doc/00-快速开始.md)
+- [doc/01-架构与领域.md](./doc/01-架构与领域.md)
+- [doc/02-工具开发.md](./doc/02-工具开发.md)
+- [doc/03-选型与扩展.md](./doc/03-选型与扩展.md)
+- [doc/04-数据库与存储.md](./doc/04-数据库与存储.md)
+- [doc/05-数据库与领域拆分说明.md](./doc/05-数据库与领域拆分说明.md)
+- [doc/06-大模型多厂商配置.md](./doc/06-大模型多厂商配置.md)

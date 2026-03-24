@@ -22,7 +22,7 @@ class LLMProviderConfig(BaseModel):
 
     def to_llm_kwargs(self) -> dict[str, Any]:
         """供 ChatOpenAI 使用的参数字典（兼容 OpenAI 协议的厂商均可复用）。"""
-        d: dict[str, Any] = {"model": self.model or "gpt-4.1-mini"}
+        d: dict[str, Any] = {"model": self.model or "gpt-5.2"}
         if self.api_key:
             d["api_key"] = self.api_key
         if self.base_url:
@@ -43,17 +43,17 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # 默认使用的 LLM 厂商
-    default_llm_provider: str = "openai"
+    default_llm_provider: str = "qwen"
 
     # OpenAI（兼容代理或兼容 OpenAI 的端点；与历史 .env 兼容）
     openai_api_key: str = ""
     openai_base_url: str | None = None
-    llm_model: str = "gpt-4.1-mini"
+    llm_model: str = "gpt-5.2"
 
     # Qwen 通义千问
     qwen_api_key: str = ""
     qwen_base_url: str | None = None
-    qwen_model: str = "qwen-plus"
+    qwen_model: str = "qwen3.5-plus"
 
     # DeepSeek
     deepseek_api_key: str = ""
@@ -72,6 +72,9 @@ class Settings(BaseSettings):
 
     # 数据库（可选）
     database_url: str = "sqlite:///./data/app.db"
+
+    # AI 应用研究院搜索 Api key
+    AI_APPLICATION_X_API_KEY: str = ""
 
     def get_llm_config(self, provider: str | None = None) -> LLMProviderConfig:
         """按厂商名获取 LLM 配置；provider 为空时使用 default_llm_provider。"""

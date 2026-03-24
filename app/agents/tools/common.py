@@ -4,9 +4,11 @@ from langchain_core.tools import tool
 
 @tool
 def echo(text: str) -> str:
-    """原样返回用户输入，用于测试或重复用户内容。
+    """原样返回传入文本。仅在用户明确要求「复述一遍」「echo」等调试场景使用。
+
+    正常问答、检索、推荐时不要调用。
 
     Args:
-        text: 任意文本
+        text: 需要原样返回的文本
     """
     return text
